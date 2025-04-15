@@ -1,0 +1,114 @@
+package project2.demo2;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import io.github.bonigarcia.wdm.WebDriverManager;
+
+import java.time.Duration;
+
+public class test2 {
+    public static void main(String[] args) throws InterruptedException {
+        // Use WebDriverManager to manage ChromeDriver
+        WebDriverManager.chromedriver().setup();
+
+        // Configure Chrome options
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--remote-debugging-port=8989");
+        options.addArguments("--user-data-dir=C:/Users/SBijjala/local chrome/chromeprofile");
+
+        WebDriver driver = new ChromeDriver(options);
+
+        try {
+            // Navigate to "Find My Device" page
+            System.out.println("Navigating to 'Find My Device' page...");
+            driver.get("https://www.google.com/android/find");
+
+            // Verify the title of the page
+            System.out.println("Verifying the title of the page...");
+            String expectedTitle = "Find My Device";
+            String actualTitle = driver.getTitle();
+
+            if (actualTitle.equals(expectedTitle)) {
+                System.out.println("Title verification successful!");
+            } else {
+                System.out.println("Title verification failed. Expected: " + expectedTitle + ", but got: " + actualTitle);
+            }
+
+            // Wait until the device name is available
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(20));
+            WebElement deviceNameElement = wait.until(ExpectedConditions.presenceOfElementLocated(By.className("KBmhOc")));
+
+            // Print the device name
+            System.out.println("Fetching device name...");
+            if (deviceNameElement != null) {
+                String deviceName = deviceNameElement.getText();
+                System.out.println("Device name: " + deviceName);
+
+                boolean deviceInfoRetrieved = false;
+                int refreshCount = 0;
+
+                while (!deviceInfoRetrieved) {
+                    // Wait for the device status to be updated
+                    System.out.println("Waiting for device status to be updated...");
+                    WebElement deviceStatusElement = wait.until(ExpectedConditions.presenceOfElementLocated(By.className("vYBRje")));
+                    String deviceStatus = deviceStatusElement.getText();
+
+                    // Check if the device status indicates an issue
+                    if (deviceStatus.contains("Can't reach device") || deviceStatus.contains("Contacting device...")) {
+                        System.out.println("Device status: " + deviceStatus + ". Refreshing...");
+                        // Wait for 10 seconds before clicking the refresh button
+                        Thread.sleep(10000);
+                        WebElement refreshButton = driver.findElement(By.xpath("//div[contains(@class,'gWzCi')]//div[@class='VYBDae-Bz112c-RLmnJb']"));
+                        refreshButton.click();
+                        refreshCount++;
+
+                        // Wait for 10 seconds after clicking the refresh button
+                        Thread.sleep(10000);
+
+                        // Refresh the entire page after 5 refresh button clicks
+                        if (refreshCount >= 5) {
+                            System.out.println("Refreshing the entire page...");
+                            driver.navigate().refresh();
+                            // Wait for 10 seconds after refreshing the entire page
+                            Thread.sleep(10000);
+                            refreshCount = 0;
+                        }
+                    } else {
+                        System.out.println("Device status: " + deviceStatus);
+                        deviceInfoRetrieved = true;
+                    }
+                }
+
+                // Click on the "Play Sound" button
+                System.out.println("Clicking on the 'Play Sound' button...");
+                WebElement playSoundButton = driver.findElement(By.xpath("//div[normalize-space()='Play sound']"));
+                if (playSoundButton != null && wait.until(ExpectedConditions.elementToBeClickable(playSoundButton)) != null) {
+                    playSoundButton.click();
+                    System.out.println("'Play Sound' button clicked!");
+                    // Wait for 5 seconds after clicking the button
+                    Thread.sleep(5000);
+                } else {
+                    System.out.println("'Play Sound' button is not clickable.");
+                }
+
+                // Print final message
+                System.out.println("Your device is in active state. Use 'Find My Device' to track the device.");
+            } else {
+                System.out.println("No device name found.");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Close the browser
+            Thread.sleep(2000);
+            System.out.println("Closing the browser...");
+            driver.quit();
+        }
+    }
+}
